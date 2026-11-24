@@ -22,6 +22,10 @@ Open **ChatGPT** from your applications menu, or run:
 flatpak run com.openai.ChatGPT
 ```
 
+On Wayland, your desktop may ask to approve a global keyboard shortcut. This is
+expected. If the requested shortcut conflicts with an existing one, choose another
+combination or cancel the request. See [shortcut prompts](docs/troubleshooting.md#global-shortcut-prompts).
+
 ## Updates
 
 Use your Flatpak software manager, or run:
