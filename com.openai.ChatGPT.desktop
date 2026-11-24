@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=ChatGPT
+Comment=ChatGPT by OpenAI (community Flatpak packaging)
+Exec=chatgpt %U
+Icon=com.openai.ChatGPT
+Type=Application
+Terminal=false
+StartupNotify=true
+Categories=Utility;Development;
+MimeType=x-scheme-handler/codex;

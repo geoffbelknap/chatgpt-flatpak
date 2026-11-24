@@ -1,0 +1,136 @@
+name: Build and publish
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml shellcheck desktop-file-utils
+          python3 scripts/validate.py
+          python3 -m unittest discover -s tests -v
+          shellcheck apply_extra.sh chatgpt-wrapper.sh scripts/*.sh
+          desktop-file-validate com.openai.ChatGPT.desktop
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install Flatpak tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder elfutils ostree xvfb xauth
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install --noninteractive --assumeyes flathub \
+            org.freedesktop.Platform//26.08 org.freedesktop.Sdk//26.08 \
+            org.electronjs.Electron2.BaseApp//26.08
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6
+        with:
+          manifest-path: com.openai.ChatGPT.yml
+          arch: ${{ matrix.arch }}
+          branch: stable
+          repo-dir: repo
+          build-bundle: false
+          upload-artifact: false
+          cache: true
+      - name: Smoke test extra-data installation
+        run: |
+          # This unsigned remote is local to the disposable CI runner.
+          flatpak --user remote-add --no-gpg-verify chatgpt-ci "$(pwd)/repo"
+          flatpak --user install --noninteractive --assumeyes chatgpt-ci com.openai.ChatGPT
+          flatpak run --command=sh com.openai.ChatGPT -eu -c '
+            test -x /app/extra/chatgpt/ChatGPT
+            test -f /app/extra/export/share/applications/com.openai.ChatGPT.desktop
+            test ! -e /app/extra/chatgpt.deb
+            command -v zypak-wrapper
+            ldd /app/extra/chatgpt/ChatGPT > /tmp/dependencies
+            cat /tmp/dependencies
+            if grep -q "not found" /tmp/dependencies; then exit 1; fi
+          '
+      # The app payload does not exist during build: it is downloaded on install.
+      - name: Archive OSTree repository (preserve symlinks and modes)
+        run: tar -cf repo-${{ matrix.arch }}.tar -C repo .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: repo-${{ matrix.arch }}
+          path: repo-${{ matrix.arch }}.tar
+          retention-days: 7
+  publish:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Install publishing tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak ostree gnupg
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: repo-*
+          path: incoming
+          merge-multiple: true
+      - name: Restore published OSTree history
+        run: scripts/restore-pages.sh public
+      - name: Import signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_KEY_ID: ${{ vars.GPG_KEY_ID }}
+        run: scripts/import-signing-key.sh
+      - name: Merge architectures and sign repository
+        env:
+          GPG_KEY_ID: ${{ vars.GPG_KEY_ID }}
+          PAGES_URL: ${{ vars.PAGES_URL }}
+        run: scripts/publish.sh public incoming
+      - name: Remove signing credentials
+        if: always()
+        run: scripts/cleanup-signing-key.sh
+      - name: Mirror repository to gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd public
+          git init -b gh-pages
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit -m "Publish Flatpak repository ${GITHUB_SHA}"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push --force "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
+          rm -rf .git
+      # GITHUB_TOKEN commits do not start branch-based Pages builds.
+      # Explicit Pages deployment makes publishing work without a PAT.
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: public
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
