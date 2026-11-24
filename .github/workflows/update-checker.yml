@@ -1,0 +1,41 @@
+name: Check upstream updates
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: upstream-updates
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+      - name: Check OpenAI's Debian repository
+        uses: docker://ghcr.io/flathub/flatpak-external-data-checker@sha256:5675136affc72fcf82f26849032d1633e959442c725ac6fb3fe8230169234185
+        with:
+          args: --edit-only com.openai.ChatGPT.yml
+      - name: Validate updated manifest
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml
+          python3 scripts/validate.py
+      - name: Commit updates and explicitly dispatch build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! git diff --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add com.openai.ChatGPT.yml
+            git commit -m 'Update official ChatGPT extra-data'
+            git push origin HEAD:main
+          fi
+          # Also dispatch on no change, so a prior dispatch failure heals itself.
+          # workflow_dispatch events are exempt from GITHUB_TOKEN recursion rules.
+          gh workflow run build-and-publish.yml --ref main

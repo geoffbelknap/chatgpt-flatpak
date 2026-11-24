@@ -1,0 +1,13 @@
+.flatpak-builder/
+build/
+flatpak_app/
+repo/
+public/
+incoming/
+*.flatpak
+*.deb
+*.tar
+__pycache__/
+*.pyc
+*.key
+*.asc

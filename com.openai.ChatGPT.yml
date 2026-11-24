@@ -1,0 +1,80 @@
+app-id: com.openai.ChatGPT
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '26.08'
+command: chatgpt
+default-branch: stable
+separate-locales: false
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  - --socket=pulseaudio
+  - --share=network
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.ScreenSaver
+  - --talk-name=org.freedesktop.portal.GlobalShortcuts
+  - --talk-name=org.freedesktop.secrets
+  - --filesystem=xdg-download
+modules:
+  # ar is an SDK tool, not a guaranteed part of the installed runtime.
+  # Build it with static libbfd/libiberty; retain only the extraction executable.
+  - name: ar
+    buildsystem: simple
+    build-commands:
+      - ./configure --prefix=/app --disable-nls --disable-shared --enable-static
+        --disable-gdb --disable-gdbserver --disable-gas --disable-ld --disable-gold
+        --disable-gprofng --disable-sim --without-debuginfod --without-zstd
+      - make -j${FLATPAK_BUILDER_N_JOBS} all-binutils
+      - install -Dm755 binutils/ar /app/bin/ar
+    sources:
+      - type: archive
+        url: https://ftp.gnu.org/gnu/binutils/binutils-2.45.tar.xz
+        sha256: c50c0e7f9cb188980e2cc97e4537626b1672441815587f1eab69d2a1bfbef5d2
+  - name: chatgpt
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 apply_extra.sh /app/bin/apply_extra
+      - install -Dm755 chatgpt-wrapper.sh /app/bin/chatgpt
+      - install -Dm644 com.openai.ChatGPT.metainfo.xml /app/share/metainfo/com.openai.ChatGPT.metainfo.xml
+      - install -Dm644 com.openai.ChatGPT.desktop /app/share/applications/com.openai.ChatGPT.desktop
+      - install -Dm644 com.openai.ChatGPT.svg /app/share/icons/hicolor/scalable/apps/com.openai.ChatGPT.svg
+    sources:
+      - type: file
+        path: apply_extra.sh
+      - type: file
+        path: chatgpt-wrapper.sh
+      - type: file
+        path: com.openai.ChatGPT.metainfo.xml
+      - type: file
+        path: com.openai.ChatGPT.desktop
+      - type: file
+        path: com.openai.ChatGPT.svg
+      - type: extra-data
+        filename: chatgpt.deb
+        only-arches: [x86_64]
+        url: https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1120.50957_amd64.deb
+        size: 501426562
+        sha256: e8ab38df96d6070fd5d4582a606490637728243bb529e9edae19b3f0a6e664d2
+        x-checker-data:
+          type: debian-repo
+          package-name: chatgpt
+          root: https://persistent.oaistatic.com/codex-app-prod/linux/deb
+          dist: stable
+          component: main
+      - type: extra-data
+        filename: chatgpt.deb
+        only-arches: [aarch64]
+        url: https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1120.50957_arm64.deb
+        size: 486767614
+        sha256: d11adb9a13d21bc5f514885924207af0e8689a978328550e3a43895a69603d89
+        x-checker-data:
+          type: debian-repo
+          package-name: chatgpt
+          root: https://persistent.oaistatic.com/codex-app-prod/linux/deb
+          dist: stable
+          component: main

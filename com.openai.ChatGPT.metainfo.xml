@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.openai.ChatGPT</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <name>ChatGPT (Unofficial)</name>
+  <summary>Unofficial Flatpak packaging of OpenAI's desktop app</summary>
+  <developer id="io.github.geoffbelknap.chatgpt-flatpak"><name>ChatGPT Flatpak project</name></developer>
+  <description>
+    <p>Use OpenAI's official Linux desktop app with ChatGPT and Codex.</p>
+    <p>This unofficial community package downloads the proprietary application
+    directly from OpenAI at installation. It is not affiliated with, endorsed by,
+    or supported by OpenAI.</p>
+  </description>
+  <launchable type="desktop-id">com.openai.ChatGPT.desktop</launchable>
+  <url type="homepage">https://github.com/geoffbelknap/chatgpt-flatpak</url>
+  <url type="help">https://github.com/geoffbelknap/chatgpt-flatpak/blob/main/docs/troubleshooting.md</url>
+  <content_rating type="oars-1.1"/>
+  <requires><internet>always</internet></requires>
+</component>
