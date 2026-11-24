@@ -146,6 +146,7 @@ jobs:
             if [ "$count" -eq 1 ]; then
               exit 0
             fi
+            echo "Waiting for Pages artifact ($attempt/12)"
             sleep 5
           done
           echo 'Pages artifact did not become visible after upload' >&2
