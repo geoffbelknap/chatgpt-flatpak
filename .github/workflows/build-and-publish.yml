@@ -56,9 +56,13 @@ jobs:
           # This unsigned remote is local to the disposable CI runner.
           flatpak --user remote-add --no-gpg-verify chatgpt-ci "$(pwd)/repo"
           flatpak --user install --noninteractive --assumeyes chatgpt-ci com.openai.ChatGPT
+          deployment=$(flatpak --user info --show-location com.openai.ChatGPT)
+          cmp "$deployment/export/share/icons/hicolor/scalable/apps/com.openai.ChatGPT.svg" \
+            "$deployment/files/extra/export/share/icons/hicolor/scalable/apps/com.openai.ChatGPT.svg"
           flatpak run --command=sh com.openai.ChatGPT -eu -c '
             test -x /app/extra/chatgpt/ChatGPT
             test -f /app/extra/export/share/applications/com.openai.ChatGPT.desktop
+            test -f /app/extra/export/share/icons/hicolor/scalable/apps/com.openai.ChatGPT.svg
             test ! -e /app/extra/chatgpt.deb
             command -v zypak-wrapper
             ldd /app/extra/chatgpt/ChatGPT > /tmp/dependencies

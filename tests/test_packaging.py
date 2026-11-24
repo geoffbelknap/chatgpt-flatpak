@@ -1,4 +1,5 @@
 import importlib.util
+import base64
 import hashlib
 import json
 import os
@@ -7,6 +8,7 @@ from unittest.mock import patch
 import subprocess
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
 spec = importlib.util.spec_from_file_location("metadata", ROOT / "scripts/generate-metadata.py")
@@ -64,6 +66,13 @@ class PackagingTests(unittest.TestCase):
                 self.assertIn("Icon=com.openai.ChatGPT", exported)
                 self.assertIn("Name=ChatGPT (Unofficial)", exported)
                 self.assertNotIn("TryExec", exported)
+                # The downloaded icon must replace the catalog SVG at the same
+                # path, preserving the exact upstream PNG bytes inside it.
+                svg = ET.parse(cwd / "export/share/icons/hicolor/scalable/apps/com.openai.ChatGPT.svg")
+                embedded = svg.getroot().find("{http://www.w3.org/2000/svg}image")
+                data_uri = embedded.attrib["{http://www.w3.org/1999/xlink}href"]
+                self.assertTrue(data_uri.startswith("data:image/png;base64,"))
+                self.assertEqual(base64.b64decode(data_uri.split(",", 1)[1]), icon.read_bytes())
 
     def test_metadata_has_real_url_and_embedded_trust_key(self):
         with tempfile.TemporaryDirectory() as tmp:
