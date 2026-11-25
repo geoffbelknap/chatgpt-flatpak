@@ -101,6 +101,12 @@ selected desktop D-Bus interfaces, including Secret Service for login storage.
 See [permissions and troubleshooting](troubleshooting.md) for details. A Flatpak
 sandbox reduces host access; it does not make an application inherently safe.
 
+The optional [native-access mode](troubleshooting.md#native-access-mode-experimental)
+launches the application outside Flatpak, with normal user-level host access.
+In that mode Flatpak provides verified delivery and updates, not application
+isolation. Its host-command permission is intentionally absent from the default
+manifest and must be explicitly enabled by the user.
+
 ## Current verification limits
 
 The updater currently reads apt metadata over HTTPS without checking OpenAI's

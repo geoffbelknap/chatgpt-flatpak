@@ -38,10 +38,50 @@ Wayland socket is available. To force XWayland for a single run:
 flatpak run --nosocket=wayland --socket=x11 com.openai.ChatGPT --ozone-platform=x11
 ```
 
-Flatpak changes the app's view of the host. Host command execution, local coding
-toolchains, browser extensions/native messaging, global shortcuts, screen capture
-and other agent/desktop integrations may require upstream portal support and are
-not guaranteed by this package. No host-execution escape or broad home-directory
-permission is included. Files in Downloads are available directly; app data lives
-under `~/.var/app/com.openai.ChatGPT/`. The in-app updater cannot replace the
-read-only application; use `flatpak update` for packaged releases.
+## Local files and host tools
+
+The default launcher runs inside Flatpak. It exposes Downloads and portal-selected
+files, while commands run against the Flatpak runtime. Granting additional folders
+does not make the host's installed tools available inside that runtime.
+
+For a selected project folder, use Flatseal or a directory-specific filesystem
+override. For native user-level access, use the mode below.
+
+## Native-access mode (experimental)
+
+This runs OpenAI's unmodified application on the host as your normal user, using
+Flatpak as the verified installation and update mechanism. The application and
+its child processes are **outside the Flatpak sandbox**, with normal user access
+to host files, commands, devices, and desktop services. It does not grant root
+privileges. OpenAI's own application approval controls still apply.
+
+After updating the package, fully quit ChatGPT before enabling this mode:
+
+```sh
+flatpak override --user --talk-name=org.freedesktop.Flatpak \
+  --env=CHATGPT_NATIVE_ACCESS=1 com.openai.ChatGPT
+flatpak run com.openai.ChatGPT
+```
+
+The host-command permission permits unsandboxed execution as your user. Enable
+it only if you trust the application with the same access as its native package.
+The launcher uses the exact installed deployment for its binary and resources,
+and keeps the existing profile under `~/.var/app/com.openai.ChatGPT/` so switching
+modes does not intentionally switch accounts. Host tools and the app's use of
+`~/.codex` can interact with your native CLI configuration and work data.
+
+This mode needs the native application's system libraries on the host. It does
+not install them or layer packages onto the immutable OS. Library availability
+was checked on Bazzite; other systems may report missing libraries. Interactive
+login, browser integration, and local agent behavior still need testing in this
+mode. It does not enable features absent from OpenAI's Linux application.
+
+To return to the default sandbox, quit ChatGPT and run:
+
+```sh
+flatpak override --user --no-talk-name=org.freedesktop.Flatpak \
+  --unset-env=CHATGPT_NATIVE_ACCESS com.openai.ChatGPT
+```
+
+In either mode, use `flatpak update` for packaged releases. The launcher does not
+patch upstream application files or disable Electron's own sandbox.

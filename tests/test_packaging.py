@@ -22,7 +22,7 @@ class PackagingTests(unittest.TestCase):
             mock = Path(tmp) / "zypak-wrapper"
             mock.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
             mock.chmod(0o755)
-            env = {**os.environ, "PATH": f"{tmp}:{os.environ['PATH']}"}
+            env = {**os.environ, "PATH": f"{tmp}:{os.environ['PATH']}", "CHATGPT_NATIVE_ACCESS": "0"}
             for wayland in ("", "wayland-0"):
                 env["WAYLAND_DISPLAY"] = wayland
                 result = subprocess.check_output(
@@ -32,6 +32,38 @@ class PackagingTests(unittest.TestCase):
                 self.assertEqual(result[0], "/app/extra/chatgpt/ChatGPT")
                 self.assertEqual(result[-2:], ["--ozone-platform=x11", "file with spaces"])
                 self.assertEqual("--enable-wayland-ime" in result, bool(wayland))
+
+    def test_native_mode_uses_host_and_preserves_profile_and_arguments(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            host = directory / "flatpak-spawn"
+            host.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+            host.chmod(0o755)
+            info = directory / "sed"
+            info.write_text('#!/bin/sh\nprintf "%s\\n" "/host/deployment with spaces/files"\n')
+            info.chmod(0o755)
+            env = {**os.environ, "PATH": f"{tmp}:{os.environ['PATH']}",
+                   "CHATGPT_NATIVE_ACCESS": "1", "WAYLAND_DISPLAY": "",
+                   "HOME": "/home/example", "XDG_CONFIG_HOME": "/home/example/.var/app/com.openai.ChatGPT/config"}
+            result = subprocess.check_output(
+                [str(ROOT / "chatgpt-wrapper.sh"), "file with spaces", "$(literal argument)"],
+                env=env, text=True,
+            ).splitlines()
+            self.assertEqual(result[:3], ["--host", "--watch-bus", "--directory=/home/example"])
+            self.assertIn("--env=XDG_CONFIG_HOME=" + env["XDG_CONFIG_HOME"], result)
+            self.assertEqual(result[-3:], ["/host/deployment with spaces/files/extra/chatgpt/ChatGPT",
+                                          "file with spaces", "$(literal argument)"])
+            self.assertFalse(any("LD_LIBRARY_PATH" in arg for arg in result))
+
+    def test_native_mode_rejects_missing_deployment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mock = Path(tmp) / "sed"
+            mock.write_text('#!/bin/sh\nexit 0\n')
+            mock.chmod(0o755)
+            env = {**os.environ, "PATH": f"{tmp}:{os.environ['PATH']}", "CHATGPT_NATIVE_ACCESS": "1"}
+            result = subprocess.run([str(ROOT / "chatgpt-wrapper.sh")],env=env,capture_output=True,text=True)
+            self.assertNotEqual(result.returncode,0)
+            self.assertIn("Cannot determine",result.stderr)
 
     def test_extracts_deb_and_does_not_run_maintainer_scripts(self):
         for compression in ("xz", "gz"):

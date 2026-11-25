@@ -49,4 +49,8 @@ The package grants Wayland/X11, GPU, microphone/audio, network, and Downloads
 access. Some host integrations may be limited by the sandbox; see
 [permissions and troubleshooting](docs/troubleshooting.md).
 
+For normal user-level access to host files and tools, an experimental
+[native-access mode](docs/troubleshooting.md#native-access-mode-experimental)
+uses Flatpak for installation and updates while running the app outside its sandbox.
+
 For build instructions and checks, see [Contributing](CONTRIBUTING.md).
