@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "app_id": "com.openai.ChatGPT",
+  "source_repository": "https://github.com/geoffbelknap/chatgpt-flatpak",
+  "source_commit": "a42df3e5a33cccde35372176324e09c04a4c6a9d",
+  "workflow_run": "https://github.com/geoffbelknap/chatgpt-flatpak/actions/runs/46114960576",
+  "manifest_sha256": "18ee6ba108a717439df78509cf6be94ecb625fbe7e94702faa2bb3f9c94fdd14",
+  "flatpak_commits": {
+    "x86_64": "505439676be2cec5cc38f7ad02e3b88d2f10a4ea74cdd57b7990e99cbb56626d",
+    "aarch64": "fbe9b62633d0a9d4c3f3a7fc00c565b38b53b09f6225fa4028efbd353e8d8dae"
+  },
+  "signing_fingerprint": "7E69D33E8B62E2A60B88E5FDB3B0349696F30CF1",
+  "upstream_packages": [
+    {
+      "architectures": [
+        "x86_64"
+      ],
+      "url": "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1120.50957_amd64.deb",
+      "size": 501426562,
+      "sha256": "e8ab38df96d6070fd5d4582a606490637728243bb529e9edae19b3f0a6e664d2"
+    },
+    {
+      "architectures": [
+        "aarch64"
+      ],
+      "url": "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1120.50957_arm64.deb",
+      "size": 486767614,
+      "sha256": "d11adb9a13d21bc5f514885924207af0e8689a978328550e3a43895a69603d89"
+    }
+  ]
+}
